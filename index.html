@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Chat</title>
+  <title>Личный чат</title>
   <style>
     body { background-color:#ffc0cb; font-family:Arial,sans-serif; display:flex; flex-direction:column; align-items:center; padding:20px; }
     h2 { color:#800040; margin-bottom:20px; }
@@ -11,27 +11,38 @@
     hr { width:80%; margin:20px 0; border:1px solid #800040; }
     #chat { border:2px solid #800040; border-radius:10px; padding:10px; width:300px; height:300px; overflow-y:auto; background-color:#ffe6f0; margin-bottom:10px; }
     #chat div { margin:5px 0; padding:5px; border-radius:5px; background-color:#ffd6e6; }
+    #users { margin-bottom:10px; }
+    #users button { width: 300px; text-align: left; }
+    #currentUser { margin-bottom: 10px; font-weight: bold; }
   </style>
 </head>
 <body>
 
-<h2>Чат</h2>
+<h2>Личный чат</h2>
+
+<div id="currentUser">Вы не вошли</div>
 
 <input id="email" placeholder="Email"><br>
 <input id="password" type="password" placeholder="Пароль"><br>
 <button onclick="register()">Регистрация</button>
 <button onclick="login()">Вход</button>
+<button onclick="logout()" style="background:#cc3366; margin-left:10px;">Выйти</button>
 
 <hr>
+
+<div id="users">
+  <b>Выберите собеседника:</b><br>
+  <!-- Сюда подгрузим кнопки пользователей -->
+</div>
 
 <div id="chat"></div>
 
 <input id="message" placeholder="Сообщение">
-<button onclick="sendMessage()">Отправить</button>
+<button onclick="sendCurrentMessage()">Отправить</button>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ======= ТВОЙ КОНФИГ =========
@@ -51,55 +62,137 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 let currentUser = null;
+let currentDialogId = null;
+let unsubscribeFromMessages = null;
 
-onAuthStateChanged(auth, user => { currentUser = user; });
+const userListElem = document.getElementById("users");
+const chatElem = document.getElementById("chat");
+const currentUserElem = document.getElementById("currentUser");
 
-// Регистрация
-window.register = async () => {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+// Тестовый список пользователей (email)
+// В реальном проекте нужно загружать из базы
+const users = [
+  "user1@example.com",
+  "user2@example.com",
+  "user3@example.com"
+];
+
+function updateUserList() {
+  userListElem.innerHTML = "<b>Выберите собеседника:</b><br>";
+  users.forEach(email => {
+    if (email !== currentUser?.email) {
+      const btn = document.createElement("button");
+      btn.textContent = email;
+      btn.onclick = () => selectDialog(email);
+      userListElem.appendChild(btn);
+    }
+  });
+}
+
+function getDialogId(user1, user2) {
+  return [user1, user2].sort().join('_');
+}
+
+function selectDialog(otherUserEmail) {
+  if (!currentUser) {
+    alert("Сначала войдите!");
+    return;
+  }
+  currentDialogId = getDialogId(currentUser.email, otherUserEmail);
+  
+  if (unsubscribeFromMessages) {
+    unsubscribeFromMessages(); // Отписаться от предыдущего диалога
+  }
+  
+  const messagesQuery = query(
+    collection(db, "dialogs", currentDialogId, "messages"),
+    orderBy("createdAt")
+  );
+
+  unsubscribeFromMessages = onSnapshot(messagesQuery, snapshot => {
+    chatElem.innerHTML = "";
+    snapshot.forEach(doc => {
+      const m = doc.data();
+      // Разные цвета для своих и чужих сообщений
+      const div = document.createElement("div");
+      div.textContent = m.text;
+      div.style.backgroundColor = m.user === currentUser.email ? "#b3e6b3" : "#ffd6e6";
+      div.style.textAlign = m.user === currentUser.email ? "right" : "left";
+      chatElem.appendChild(div);
+    });
+    chatElem.scrollTop = chatElem.scrollHeight;
+  });
+}
+
+async function sendCurrentMessage() {
+  const textElem = document.getElementById("message");
+  const text = textElem.value.trim();
+  if (!currentUser) {
+    alert("Сначала войдите!");
+    return;
+  }
+  if (!currentDialogId) {
+    alert("Выберите собеседника!");
+    return;
+  }
+  if (text === "") return;
+
   try {
-    await createUserWithEmailAndPassword(auth, email, password);
-    alert("Аккаунт создан!");
-  } catch(err) { alert("Ошибка регистрации: " + err.message); }
-};
-
-// Вход
-window.login = async () => {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-    alert("Вход выполнен!");
-  } catch(err) { alert("Ошибка входа: " + err.message); }
-};
-
-// Отправка сообщений
-window.sendMessage = async () => {
-  const text = document.getElementById("message").value;
-  if(!currentUser){ alert("Сначала войдите!"); return; }
-  if(text.trim() === "") return;
-  try {
-    await addDoc(collection(db, "messages"), {
+    await addDoc(collection(db, "dialogs", currentDialogId, "messages"), {
       text,
       user: currentUser.email,
       createdAt: serverTimestamp()
     });
-    document.getElementById("message").value = "";
-  } catch(err){ alert("Ошибка отправки: " + err.message); }
+    textElem.value = "";
+  } catch(err) {
+    alert("Ошибка отправки: " + err.message);
+  }
+}
+
+window.register = async () => {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  try {
+    await createUserWithEmailAndPassword(auth, email, password);
+    alert("Аккаунт создан!");
+  } catch(err) {
+    alert("Ошибка регистрации: " + err.message);
+  }
 };
 
-// Автообновление чата
-const q = query(collection(db, "messages"), orderBy("createdAt"));
-onSnapshot(q, snapshot => {
-  const chat = document.getElementById("chat");
-  chat.innerHTML = "";
-  snapshot.forEach(doc => {
-    const m = doc.data();
-    chat.innerHTML += "<div><b>" + (m.user || "anon") + ":</b> " + m.text + "</div>";
-  });
-  chat.scrollTop = chat.scrollHeight;
+window.login = async () => {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    alert("Вход выполнен!");
+  } catch(err) {
+    alert("Ошибка входа: " + err.message);
+  }
+};
+
+window.logout = async () => {
+  try {
+    await signOut(auth);
+    alert("Вы вышли из аккаунта.");
+  } catch(err) {
+    alert("Ошибка выхода: " + err.message);
+  }
+};
+
+onAuthStateChanged(auth, user => {
+  currentUser = user;
+  if (user) {
+    currentUserElem.textContent = "Вы вошли: " + user.email;
+  } else {
+    currentUserElem.textContent = "Вы не вошли";
+    chatElem.innerHTML = "";
+    if (unsubscribeFromMessages) unsubscribeFromMessages();
+    currentDialogId = null;
+  }
+  updateUserList();
 });
+
 </script>
 
 </body>
