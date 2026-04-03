@@ -3,80 +3,22 @@
 <head>
   <title>Chat</title>
   <style>
-    /* Фон и общий стиль страницы */
-    body {
-      background-color: #ffc0cb; /* розовый */
-      font-family: 'Arial', sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
-    }
-
-    h2 {
-      color: #800040;
-      margin-bottom: 20px;
-    }
-
-    /* Поля ввода */
-    input {
-      padding: 10px;
-      margin: 5px 0;
-      border-radius: 5px;
-      border: 1px solid #800040;
-      width: 250px;
-      font-size: 16px;
-    }
-
-    button {
-      padding: 10px 20px;
-      margin: 5px;
-      border: none;
-      border-radius: 5px;
-      background-color: #800040;
-      color: #fff;
-      cursor: pointer;
-      font-size: 16px;
-      transition: background-color 0.3s;
-    }
-
-    button:hover {
-      background-color: #a00060;
-    }
-
-    hr {
-      width: 80%;
-      margin: 20px 0;
-      border: 1px solid #800040;
-    }
-
-    /* Чат */
-    #chat {
-      border: 2px solid #800040;
-      border-radius: 10px;
-      padding: 10px;
-      width: 300px;
-      height: 300px;
-      overflow-y: auto;
-      background-color: #ffe6f0;
-      margin-bottom: 10px;
-    }
-
-    #chat div {
-      margin: 5px 0;
-      padding: 5px;
-      border-radius: 5px;
-      background-color: #ffd6e6;
-    }
+    body { background-color:#ffc0cb; font-family:Arial,sans-serif; display:flex; flex-direction:column; align-items:center; padding:20px; }
+    h2 { color:#800040; margin-bottom:20px; }
+    input { padding:10px; margin:5px 0; border-radius:5px; border:1px solid #800040; width:250px; font-size:16px; }
+    button { padding:10px 20px; margin:5px; border:none; border-radius:5px; background-color:#800040; color:#fff; cursor:pointer; font-size:16px; transition:0.3s; }
+    button:hover { background-color:#a00060; }
+    hr { width:80%; margin:20px 0; border:1px solid #800040; }
+    #chat { border:2px solid #800040; border-radius:10px; padding:10px; width:300px; height:300px; overflow-y:auto; background-color:#ffe6f0; margin-bottom:10px; }
+    #chat div { margin:5px 0; padding:5px; border-radius:5px; background-color:#ffd6e6; }
   </style>
 </head>
 <body>
 
 <h2>Чат</h2>
 
-<input id="email" placeholder="email"><br>
-<input id="password" type="password" placeholder="password"><br>
-
+<input id="email" placeholder="Email"><br>
+<input id="password" type="password" placeholder="Пароль"><br>
 <button onclick="register()">Регистрация</button>
 <button onclick="login()">Вход</button>
 
@@ -84,7 +26,7 @@
 
 <div id="chat"></div>
 
-<input id="message" placeholder="сообщение">
+<input id="message" placeholder="Сообщение">
 <button onclick="sendMessage()">Отправить</button>
 
 <script type="module">
@@ -92,6 +34,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+// ======= ТВОЙ КОНФИГ =========
 const firebaseConfig = {
   apiKey: "AIzaSyB7VHLS8mZGA2ibzgdjP9Rh_CYbSCOXy4E",
   authDomain: "project-1058159525962641435.firebaseapp.com",
@@ -101,6 +44,7 @@ const firebaseConfig = {
   appId: "1:439272881011:web:0a311dcd8356483941a306",
   measurementId: "G-JJ6FG1MJDJ"
 };
+// ===============================
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -108,54 +52,46 @@ const db = getFirestore(app);
 
 let currentUser = null;
 
-onAuthStateChanged(auth, (user) => {
-  currentUser = user;
-});
+onAuthStateChanged(auth, user => { currentUser = user; });
 
+// Регистрация
 window.register = async () => {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
   try {
     await createUserWithEmailAndPassword(auth, email, password);
-    alert("Аккаунт создан");
-  } catch (err) {
-    alert("Ошибка: " + err.message);
-  }
+    alert("Аккаунт создан!");
+  } catch(err) { alert("Ошибка регистрации: " + err.message); }
 };
 
+// Вход
 window.login = async () => {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
   try {
     await signInWithEmailAndPassword(auth, email, password);
-    alert("Вошёл");
-  } catch (err) {
-    alert("Ошибка: " + err.message);
-  }
+    alert("Вход выполнен!");
+  } catch(err) { alert("Ошибка входа: " + err.message); }
 };
 
+// Отправка сообщений
 window.sendMessage = async () => {
   const text = document.getElementById("message").value;
-  if(!currentUser) {
-    alert("Сначала войдите!");
-    return;
-  }
+  if(!currentUser){ alert("Сначала войдите!"); return; }
   if(text.trim() === "") return;
-
   try {
     await addDoc(collection(db, "messages"), {
       text,
       user: currentUser.email,
-      createdAt: serverTimestamp(),
+      createdAt: serverTimestamp()
     });
     document.getElementById("message").value = "";
-  } catch (err) {
-    alert("Ошибка отправки: " + err.message);
-  }
+  } catch(err){ alert("Ошибка отправки: " + err.message); }
 };
 
+// Автообновление чата
 const q = query(collection(db, "messages"), orderBy("createdAt"));
-onSnapshot(q, (snapshot) => {
+onSnapshot(q, snapshot => {
   const chat = document.getElementById("chat");
   chat.innerHTML = "";
   snapshot.forEach(doc => {
