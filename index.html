@@ -1,1 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat</title>
+</head>
+<body>
 
+<h2>Чат</h2>
+
+<input id="email" placeholder="email"><br><br>
+<input id="password" type="password" placeholder="password"><br><br>
+
+<button onclick="register()">Регистрация</button>
+<button onclick="login()">Вход</button>
+
+<hr>
+
+<div id="chat" style="border:1px solid #ccc; padding:10px; height:300px; overflow-y:scroll;"></div>
+
+<input id="message" placeholder="сообщение">
+<button onclick="sendMessage()">Отправить</button>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ======= ТВОЙ КОНФИГ =========
+const firebaseConfig = {
+  apiKey: "AIzaSyB7VHLS8mZGA2ibzgdjP9Rh_CYbSCOXy4E",
+  authDomain: "project-1058159525962641435.firebaseapp.com",
+  projectId: "project-1058159525962641435",
+  storageBucket: "project-1058159525962641435.firebasestorage.app",
+  messagingSenderId: "439272881011",
+  appId: "1:439272881011:web:0a311dcd8356483941a306",
+  measurementId: "G-JJ6FG1MJDJ"
+};
+// ===============================
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let currentUser = null;
+
+// Слежение за авторизацией
+onAuthStateChanged(auth, (user) => {
+  currentUser = user;
+  if(user){
+    console.log("Вошёл:", user.email);
+  } else {
+    console.log("Пользователь вышел");
+  }
+});
+
+// Регистрация
+window.register = async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  try {
+    await createUserWithEmailAndPassword(auth, email, password);
+    alert("Аккаунт создан");
+  } catch (err) {
+    alert("Ошибка: " + err.message);
+  }
+};
+
+// Вход
+window.login = async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    alert("Вошёл");
+  } catch (err) {
+    alert("Ошибка: " + err.message);
+  }
+};
+
+// Отправка сообщений
+window.sendMessage = async () => {
+  const text = document.getElementById("message").value;
+  if(!currentUser){
+    alert("Сначала войдите!");
+    return;
+  }
+  if(text.trim() === "") return;
+
+  try {
+    await addDoc(collection(db, "messages"), {
+      text,
+      user: currentUser.email,
+      createdAt: serverTimestamp(),
+    });
+    document.getElementById("message").value = "";
+  } catch (err) {
+    alert("Ошибка отправки: " + err.message);
+  }
+};
+
+// Слежение за сообщениями
+const q = query(collection(db, "messages"), orderBy("createdAt"));
+onSnapshot(q, (snapshot) => {
+  const chat = document.getElementById("chat");
+  chat.innerHTML = "";
+  snapshot.forEach(doc => {
+    const m = doc.data();
+    chat.innerHTML += "<div><b>" + (m.user || "anon") + ":</b> " + m.text + "</div>";
+  });
+  chat.scrollTop = chat.scrollHeight; // прокрутка вниз
+});
+</script>
+
+</body>
+</html>
