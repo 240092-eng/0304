@@ -2,20 +2,87 @@
 <html>
 <head>
   <title>Chat</title>
+  <style>
+    /* Фон и общий стиль страницы */
+    body {
+      background-color: #ffc0cb; /* розовый */
+      font-family: 'Arial', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    h2 {
+      color: #800040;
+      margin-bottom: 20px;
+    }
+
+    /* Поля ввода */
+    input {
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 5px;
+      border: 1px solid #800040;
+      width: 250px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 5px;
+      background-color: #800040;
+      color: #fff;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #a00060;
+    }
+
+    hr {
+      width: 80%;
+      margin: 20px 0;
+      border: 1px solid #800040;
+    }
+
+    /* Чат */
+    #chat {
+      border: 2px solid #800040;
+      border-radius: 10px;
+      padding: 10px;
+      width: 300px;
+      height: 300px;
+      overflow-y: auto;
+      background-color: #ffe6f0;
+      margin-bottom: 10px;
+    }
+
+    #chat div {
+      margin: 5px 0;
+      padding: 5px;
+      border-radius: 5px;
+      background-color: #ffd6e6;
+    }
+  </style>
 </head>
 <body>
 
 <h2>Чат</h2>
 
-<input id="email" placeholder="email"><br><br>
-<input id="password" type="password" placeholder="password"><br><br>
+<input id="email" placeholder="email"><br>
+<input id="password" type="password" placeholder="password"><br>
 
 <button onclick="register()">Регистрация</button>
 <button onclick="login()">Вход</button>
 
 <hr>
 
-<div id="chat" style="border:1px solid #ccc; padding:10px; height:300px; overflow-y:scroll;"></div>
+<div id="chat"></div>
 
 <input id="message" placeholder="сообщение">
 <button onclick="sendMessage()">Отправить</button>
@@ -25,7 +92,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// ======= ТВОЙ КОНФИГ =========
 const firebaseConfig = {
   apiKey: "AIzaSyB7VHLS8mZGA2ibzgdjP9Rh_CYbSCOXy4E",
   authDomain: "project-1058159525962641435.firebaseapp.com",
@@ -35,7 +101,6 @@ const firebaseConfig = {
   appId: "1:439272881011:web:0a311dcd8356483941a306",
   measurementId: "G-JJ6FG1MJDJ"
 };
-// ===============================
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -43,17 +108,10 @@ const db = getFirestore(app);
 
 let currentUser = null;
 
-// Слежение за авторизацией
 onAuthStateChanged(auth, (user) => {
   currentUser = user;
-  if(user){
-    console.log("Вошёл:", user.email);
-  } else {
-    console.log("Пользователь вышел");
-  }
 });
 
-// Регистрация
 window.register = async () => {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
@@ -65,7 +123,6 @@ window.register = async () => {
   }
 };
 
-// Вход
 window.login = async () => {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
@@ -77,10 +134,9 @@ window.login = async () => {
   }
 };
 
-// Отправка сообщений
 window.sendMessage = async () => {
   const text = document.getElementById("message").value;
-  if(!currentUser){
+  if(!currentUser) {
     alert("Сначала войдите!");
     return;
   }
@@ -98,7 +154,6 @@ window.sendMessage = async () => {
   }
 };
 
-// Слежение за сообщениями
 const q = query(collection(db, "messages"), orderBy("createdAt"));
 onSnapshot(q, (snapshot) => {
   const chat = document.getElementById("chat");
@@ -107,7 +162,7 @@ onSnapshot(q, (snapshot) => {
     const m = doc.data();
     chat.innerHTML += "<div><b>" + (m.user || "anon") + ":</b> " + m.text + "</div>";
   });
-  chat.scrollTop = chat.scrollHeight; // прокрутка вниз
+  chat.scrollTop = chat.scrollHeight;
 });
 </script>
 
