@@ -32,7 +32,6 @@
 
 <div id="users">
   <b>Выберите собеседника:</b><br>
-  <!-- Сюда подгрузим кнопки пользователей -->
 </div>
 
 <div id="chat"></div>
@@ -43,17 +42,16 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ======= ТВОЙ КОНФИГ =========
 const firebaseConfig = {
-  apiKey: "AIzaSyB7VHLS8mZGA2ibzgdjP9Rh_CYbSCOXy4E",
-  authDomain: "project-1058159525962641435.firebaseapp.com",
-  projectId: "project-1058159525962641435",
-  storageBucket: "project-1058159525962641435.firebasestorage.app",
-  messagingSenderId: "439272881011",
-  appId: "1:439272881011:web:0a311dcd8356483941a306",
-  measurementId: "G-JJ6FG1MJDJ"
+  apiKey: "ТВОЙ_API_KEY",
+  authDomain: "ТВОЙ_AUTH_DOMAIN",
+  projectId: "ТВОЙ_PROJECT_ID",
+  storageBucket: "ТВОЙ_BUCKET",
+  messagingSenderId: "ТВОЙ_ID",
+  appId: "ТВОЙ_APP_ID"
 };
 // ===============================
 
@@ -69,16 +67,25 @@ const userListElem = document.getElementById("users");
 const chatElem = document.getElementById("chat");
 const currentUserElem = document.getElementById("currentUser");
 
-// Тестовый список пользователей (email)
-// В реальном проекте нужно загружать из базы
-const users = [
-  "user1@example.com",
-  "user2@example.com",
-  "user3@example.com"
-];
+// ===== ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ ИЗ FIRESTORE =====
+async function loadUsers() {
+  const snapshot = await getDocs(collection(db, "users"));
+  
+  const users = [];
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    if (data.email) {
+      users.push(data.email);
+    }
+  });
 
-function updateUserList() {
+  updateUserList(users);
+}
+
+// ===== ОБНОВЛЕНИЕ СПИСКА =====
+function updateUserList(users) {
   userListElem.innerHTML = "<b>Выберите собеседника:</b><br>";
+  
   users.forEach(email => {
     if (email !== currentUser?.email) {
       const btn = document.createElement("button");
@@ -93,17 +100,19 @@ function getDialogId(user1, user2) {
   return [user1, user2].sort().join('_');
 }
 
+// ===== ВЫБОР ДИАЛОГА =====
 function selectDialog(otherUserEmail) {
   if (!currentUser) {
     alert("Сначала войдите!");
     return;
   }
+
   currentDialogId = getDialogId(currentUser.email, otherUserEmail);
-  
+
   if (unsubscribeFromMessages) {
-    unsubscribeFromMessages(); // Отписаться от предыдущего диалога
+    unsubscribeFromMessages();
   }
-  
+
   const messagesQuery = query(
     collection(db, "dialogs", currentDialogId, "messages"),
     orderBy("createdAt")
@@ -111,86 +120,91 @@ function selectDialog(otherUserEmail) {
 
   unsubscribeFromMessages = onSnapshot(messagesQuery, snapshot => {
     chatElem.innerHTML = "";
+
     snapshot.forEach(doc => {
       const m = doc.data();
-      // Разные цвета для своих и чужих сообщений
       const div = document.createElement("div");
+
       div.textContent = m.text;
       div.style.backgroundColor = m.user === currentUser.email ? "#b3e6b3" : "#ffd6e6";
       div.style.textAlign = m.user === currentUser.email ? "right" : "left";
+
       chatElem.appendChild(div);
     });
+
     chatElem.scrollTop = chatElem.scrollHeight;
   });
 }
 
+// ===== ОТПРАВКА СООБЩЕНИЯ =====
 async function sendCurrentMessage() {
   const textElem = document.getElementById("message");
   const text = textElem.value.trim();
-  if (!currentUser) {
-    alert("Сначала войдите!");
-    return;
-  }
-  if (!currentDialogId) {
-    alert("Выберите собеседника!");
-    return;
-  }
-  if (text === "") return;
 
-  try {
-    await addDoc(collection(db, "dialogs", currentDialogId, "messages"), {
-      text,
-      user: currentUser.email,
-      createdAt: serverTimestamp()
-    });
-    textElem.value = "";
-  } catch(err) {
-    alert("Ошибка отправки: " + err.message);
-  }
+  if (!currentUser) return alert("Сначала войдите!");
+  if (!currentDialogId) return alert("Выберите собеседника!");
+  if (!text) return;
+
+  await addDoc(collection(db, "dialogs", currentDialogId, "messages"), {
+    text,
+    user: currentUser.email,
+    createdAt: serverTimestamp()
+  });
+
+  textElem.value = "";
 }
 
+// ===== РЕГИСТРАЦИЯ =====
 window.register = async () => {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
+
   try {
     await createUserWithEmailAndPassword(auth, email, password);
+
+    // 🔥 СОХРАНЯЕМ В FIRESTORE
+    await addDoc(collection(db, "users"), {
+      email: email
+    });
+
     alert("Аккаунт создан!");
   } catch(err) {
-    alert("Ошибка регистрации: " + err.message);
+    alert(err.message);
   }
 };
 
+// ===== ВХОД =====
 window.login = async () => {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
+
   try {
     await signInWithEmailAndPassword(auth, email, password);
     alert("Вход выполнен!");
   } catch(err) {
-    alert("Ошибка входа: " + err.message);
+    alert(err.message);
   }
 };
 
+// ===== ВЫХОД =====
 window.logout = async () => {
-  try {
-    await signOut(auth);
-    alert("Вы вышли из аккаунта.");
-  } catch(err) {
-    alert("Ошибка выхода: " + err.message);
-  }
+  await signOut(auth);
 };
 
+// ===== ОТСЛЕЖИВАНИЕ =====
 onAuthStateChanged(auth, user => {
   currentUser = user;
+
   if (user) {
     currentUserElem.textContent = "Вы вошли: " + user.email;
+    loadUsers(); // 🔥 ключевой момент
   } else {
     currentUserElem.textContent = "Вы не вошли";
     chatElem.innerHTML = "";
-    if (unsubscribeFromMessages) unsubscribeFromMessages();
     currentDialogId = null;
+
+    if (unsubscribeFromMessages) unsubscribeFromMessages();
   }
-  updateUserList();
 });
 
 </script>
