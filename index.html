@@ -2,193 +2,175 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Личный чат — Система DM</title>
+    <title>Личный чат — DM System</title>
     <style>
-        /* Стилизация под макет и требования задания */
-        body { background-color:#ffc0cb; font-family: 'Segoe UI', Tahoma, sans-serif; display:flex; flex-direction:column; align-items:center; padding:20px; }
-        .chat-app { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 450px; }
-        h2 { color:#800040; margin-top: 0; text-align: center; text-transform: uppercase; letter-spacing: 1px; }
+        body { background-color:#ffc0cb; font-family: 'Segoe UI', Arial, sans-serif; display:flex; flex-direction:column; align-items:center; padding:20px; }
+        .app-container { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); width: 450px; text-align: center; }
+        h2 { color:#800040; margin-top: 0; }
         
-        #userStatus { margin-bottom: 20px; font-weight: bold; color: #800040; text-align: center; border-bottom: 1px solid #ffd6e6; padding-bottom: 10px; }
+        #statusInfo { margin-bottom: 15px; font-weight: bold; color: #800040; background: #fff0f5; padding: 10px; border-radius: 10px; }
         
-        button { padding:12px 20px; border:none; border-radius:10px; cursor:pointer; font-size: 15px; transition: all 0.3s ease; }
-        .btn-google { background-color: #4285F4; color: white; width: 100%; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .btn-google:hover { background-color: #357abd; transform: translateY(-1px); }
-        .btn-logout { background-color: #ff4d4d; color: white; font-size: 12px; margin: 0 auto; display: block; }
+        button { padding:12px 15px; border:none; border-radius:10px; cursor:pointer; font-size:15px; transition: 0.2s; }
+        .google-btn { background-color: #4285F4; color: white; width: 100%; font-weight: bold; margin-bottom: 10px; }
+        .google-btn:hover { background-color: #357abd; }
+        .exit-btn { background-color: #d11a2a; color: white; margin-top: 10px; font-size: 12px; }
         
-        #sidebar { margin: 20px 0; text-align: left; }
-        .contact-label { color: #800040; font-size: 14px; margin-bottom: 10px; display: block; }
-        .user-btn { 
-            background-color: #fff; border: 1px solid #800040; color: #800040; 
-            width: 100%; margin-bottom: 8px; text-align: left; padding: 10px 15px; font-weight: 500;
+        #contacts-section { margin-top: 20px; border-top: 2px solid #ffc0cb; padding-top: 15px; text-align: left; }
+        .user-link { 
+            background: #fff; border: 1.5px solid #800040; color: #800040; 
+            width: 100%; margin-bottom: 8px; text-align: center; font-weight: 600;
         }
-        .user-btn:hover { background-color: #ffd6e6; }
-        .user-btn.active { background-color: #800040 !important; color: white !important; }
+        .user-link:hover { background: #ffd6e6; }
+        .user-link.active { background: #800040 !important; color: white !important; }
 
-        #chatBox { 
-            border: 2px solid #800040; border-radius: 12px; height: 350px; overflow-y: auto; 
-            background-color: #fffafc; padding: 15px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; 
+        #chatDisplay { 
+            border: 2px solid #800040; border-radius: 12px; height: 320px; overflow-y: auto; 
+            background-color: #fffafc; padding: 15px; display: flex; flex-direction: column; gap: 10px; margin: 15px 0;
         }
-        .message { padding: 10px 14px; border-radius: 15px; font-size: 14px; max-width: 80%; word-wrap: break-word; position: relative; }
-        .my-msg { align-self: flex-end; background-color: #b3e6b3; border: 1px solid #99d699; color: #1a4d1a; border-bottom-right-radius: 2px; }
-        .their-msg { align-self: flex-start; background-color: #ffd6e6; border: 1px solid #800040; color: #800040; border-bottom-left-radius: 2px; }
+        .msg-bubble { padding: 10px 14px; border-radius: 15px; font-size: 14px; max-width: 85%; word-wrap: break-word; }
+        .sent { align-self: flex-end; background-color: #b3e6b3; border: 1px solid #8dbd8d; }
+        .received { align-self: flex-start; background-color: #ffd6e6; border: 1px solid #800040; }
 
-        .controls { display: flex; gap: 10px; }
-        #messageInput { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #800040; outline: none; font-size: 14px; }
-        .btn-send { background: #800040; color: white; font-weight: bold; width: 60px; }
-        .btn-send:hover { background: #a00060; }
+        .input-bar { display: flex; gap: 8px; }
+        #textInput { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #800040; outline: none; }
+        .send-btn { background: #800040; color: white; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div class="chat-app">
+<div class="app-container">
     <h2>Личный чат</h2>
-    <div id="userStatus">Загрузка системы...</div>
+    <div id="statusInfo">Проверка авторизации...</div>
     
-    <div id="loginSection">
-        <button class="btn-google" onclick="window.signIn()">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/pwa_google_color_16dp.png" alt="">
-            Войти через Google
-        </button>
+    <div id="authBlock">
+        <button class="google-btn" onclick="window.googleLogin()">Войти через Google Аккаунт</button>
     </div>
-    
-    <button id="logoutBtn" class="btn-logout" onclick="window.signOutUser()" style="display:none;">Выйти</button>
+    <button id="exitBtn" class="exit-btn" onclick="window.googleLogout()" style="display:none;">Выйти</button>
 
-    <div id="chatSection" style="display:none;">
-        <div id="sidebar">
-            <span class="contact-label"><b>Ваши контакты:</b></span>
-            <div id="contactList"></div>
+    <div id="mainChatUI" style="display:none;">
+        <div id="contacts-section">
+            <b style="color: #800040;">Выберите собеседника:</b>
+            <div id="userButtons" style="margin-top: 10px;"></div>
         </div>
 
-        <div id="chatBox">Выберите собеседника для начала DM</div>
+        <div id="chatDisplay">Начните диалог, выбрав пользователя выше</div>
 
-        <div class="controls">
-            <input id="messageInput" placeholder="Напишите сообщение..." autocomplete="off">
-            <button class="btn-send" onclick="window.pushMessage()">➤</button>
+        <div class="input-bar">
+            <input id="textInput" placeholder="Напишите сообщение..." autocomplete="off">
+            <button class="send-btn" onclick="window.sendData()">➤</button>
         </div>
     </div>
 </div>
 
 <script type="module">
-    // Инициализация Firebase модулей
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyBEp1DrecAiwiAGjUQsR0DOsLHgMlX8PW4",
-        authDomain: "chat-app-a4031.firebaseapp.com",
-        projectId: "chat-app-a4031",
-        storageBucket: "chat-app-a4031.appspot.com",
-        messagingSenderId: "949683463039",
-        appId: "1:949683463039:web:221d74c75303665329704a"
-    };
+const firebaseConfig = {
+    apiKey: "AIzaSyBEp1DrecAiwiAGjUQsR0DOsLHgMlX8PW4",
+    authDomain: "chat-app-a4031.firebaseapp.com",
+    projectId: "chat-app-a4031",
+    storageBucket: "chat-app-a4031.appspot.com",
+    messagingSenderId: "949683463039",
+    appId: "1:949683463039:web:221d74c75303665329704a"
+};
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const googleProvider = new GoogleAuthProvider();
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
 
-    let activeDialogId = null;
-    let chatListener = null;
+let activeRoom = null;
+let stopListening = null;
 
-    // Глобальные функции для работы с интерфейсом
-    window.signIn = async () => {
-        try {
-            const res = await signInWithPopup(auth, googleProvider);
-            // Сохраняем/обновляем пользователя в базе
-            await setDoc(doc(db, "users", res.user.email), {
-                email: res.user.email,
-                name: res.user.displayName,
-                lastSeen: serverTimestamp()
-            });
-        } catch (e) { console.error("Ошибка входа:", e); }
-    };
-
-    window.signOutUser = () => signOut(auth);
-
-    window.loadMessages = (targetEmail, element) => {
-        // Формируем уникальный ID диалога (всегда одинаковый для двоих)
-        activeDialogId = [auth.currentUser.email, targetEmail].sort().join('_');
-        
-        // Визуальное переключение активного контакта
-        document.querySelectorAll('.user-btn').forEach(b => b.classList.remove('active'));
-        element.classList.add('active');
-
-        // Отписываемся от предыдущего чата, если он был
-        if (chatListener) chatListener();
-
-        // Загружаем сообщения в реальном времени
-        const q = query(collection(db, "dialogs", activeDialogId, "messages"), orderBy("createdAt"));
-        chatListener = onSnapshot(q, (snap) => {
-            const chatBox = document.getElementById("chatBox");
-            chatBox.innerHTML = "";
-            snap.forEach(d => {
-                const msgData = d.data();
-                const msgDiv = document.createElement("div");
-                msgDiv.className = msgData.user === auth.currentUser.email ? "message my-msg" : "message their-msg";
-                msgDiv.textContent = msgData.text;
-                chatBox.appendChild(msgDiv);
-            });
-            chatBox.scrollTop = chatBox.scrollHeight;
+// Глобальные методы
+window.googleLogin = async () => {
+    try {
+        const res = await signInWithPopup(auth, provider);
+        await setDoc(doc(db, "users", res.user.email), {
+            email: res.user.email,
+            name: res.user.displayName
         });
-    };
+    } catch (e) { alert("Ошибка входа! Проверьте настройки Google в Firebase."); }
+};
 
-    window.pushMessage = async () => {
-        const input = document.getElementById("messageInput");
-        const val = input.value.trim();
-        if (!activeDialogId || !val) return;
-        
-        try {
-            await addDoc(collection(db, "dialogs", activeDialogId, "messages"), {
-                text: val,
-                user: auth.currentUser.email,
-                createdAt: serverTimestamp()
-            });
-            input.value = "";
-        } catch (e) { alert("Ошибка отправки"); }
-    };
+window.googleLogout = () => signOut(auth);
 
-    // Обработка Enter
-    document.getElementById("messageInput").addEventListener("keypress", (e) => {
-        if (e.key === "Enter") window.pushMessage();
+window.startChat = (targetEmail, btnElement) => {
+    activeRoom = [auth.currentUser.email, targetEmail].sort().join('_');
+    
+    document.querySelectorAll('.user-link').forEach(b => b.classList.remove('active'));
+    btnElement.classList.add('active');
+
+    if (stopListening) stopListening();
+
+    const q = query(collection(db, "dialogs", activeRoom, "messages"), orderBy("createdAt"));
+    stopListening = onSnapshot(q, (snapshot) => {
+        const box = document.getElementById("chatDisplay");
+        box.innerHTML = "";
+        snapshot.forEach(d => {
+            const m = d.data();
+            const div = document.createElement("div");
+            div.className = m.user === auth.currentUser.email ? "msg-bubble sent" : "msg-bubble received";
+            div.textContent = m.text;
+            box.appendChild(div);
+        });
+        box.scrollTop = box.scrollHeight;
     });
+};
 
-    // Реакция на смену состояния пользователя
-    onAuthStateChanged(auth, async (user) => {
-        const status = document.getElementById("userStatus");
-        const loginSection = document.getElementById("loginSection");
-        const logoutBtn = document.getElementById("logoutBtn");
-        const chatSection = document.getElementById("chatSection");
-        const contactList = document.getElementById("contactList");
-
-        if (user) {
-            status.textContent = "Вы вошли: " + user.displayName;
-            loginSection.style.display = "none";
-            logoutBtn.style.display = "block";
-            chatSection.style.display = "block";
-
-            // Загружаем список всех пользователей, кроме себя
-            const usersSnap = await getDocs(collection(db, "users"));
-            contactList.innerHTML = "";
-            usersSnap.forEach(uDoc => {
-                const userData = uDoc.data();
-                if (userData.email !== user.email) {
-                    const b = document.createElement("button");
-                    b.className = "user-btn";
-                    b.textContent = userData.name || userData.email;
-                    b.onclick = (e) => window.loadMessages(userData.email, e.target);
-                    contactList.appendChild(b);
-                }
-            });
-        } else {
-            status.textContent = "Вы не авторизованы";
-            loginSection.style.display = "block";
-            logoutBtn.style.display = "none";
-            chatSection.style.display = "none";
-            if (chatListener) chatListener();
-        }
+window.sendData = async () => {
+    const input = document.getElementById("textInput");
+    if (!activeRoom || !input.value.trim()) return;
+    
+    await addDoc(collection(db, "dialogs", activeRoom, "messages"), {
+        text: input.value,
+        user: auth.currentUser.email,
+        createdAt: serverTimestamp()
     });
+    input.value = "";
+};
+
+// Enter для отправки
+document.getElementById("textInput").addEventListener("keypress", (e) => {
+    if (e.key === "Enter") window.sendData();
+});
+
+// Авторизация
+onAuthStateChanged(auth, async (user) => {
+    const status = document.getElementById("statusInfo");
+    const authBlock = document.getElementById("authBlock");
+    const exitBtn = document.getElementById("exitBtn");
+    const mainUI = document.getElementById("mainChatUI");
+    const userButtons = document.getElementById("userButtons");
+
+    if (user) {
+        status.textContent = "Вы вошли: " + user.displayName;
+        authBlock.style.display = "none";
+        exitBtn.style.display = "block";
+        mainUI.style.display = "block";
+
+        const snap = await getDocs(collection(db, "users"));
+        userButtons.innerHTML = "";
+        snap.forEach(docData => {
+            const data = docData.data();
+            if (data.email !== user.email) {
+                const b = document.createElement("button");
+                b.className = "user-link";
+                b.textContent = data.name || data.email;
+                b.onclick = (e) => window.startChat(data.email, e.target);
+                userButtons.appendChild(b);
+            }
+        });
+    } else {
+        status.textContent = "Вы не вошли";
+        authBlock.style.display = "block";
+        exitBtn.style.display = "none";
+        mainUI.style.display = "none";
+        if (stopListening) stopListening();
+    }
+});
 </script>
 </body>
 </html>
